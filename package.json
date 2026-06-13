@@ -1,0 +1,6 @@
+{
+  "name": "conversor-pasaje",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Convierte mails/imagenes desordenados en una ficha ordenada para importar presupuestos"
+}

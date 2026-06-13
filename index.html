@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Conversor de fichas · Pasaje Club</title>
+<style>
+  :root {
+    --ink: #16273a;
+    --lime: #c8df28;
+    --teal: #1ab9b0;
+    --paper: #f6f7f4;
+    --line: #d7dbd2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 48px; }
+  .head { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 10px; background: var(--ink);
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  h1 { font-size: 1.35rem; font-weight: 800; line-height: 1.1; margin: 0; }
+  .sub { font-size: 0.82rem; margin: 0; opacity: 0.6; }
+  .rule { height: 3px; width: 64px; background: var(--lime); border-radius: 3px; margin: 16px 0 22px; }
+  label.field { display: block; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); }
+  textarea {
+    width: 100%; margin-top: 8px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+    background: #fff; font-size: 0.9rem; line-height: 1.5; resize: vertical; outline: none; color: var(--ink);
+    font-family: inherit; min-height: 170px;
+  }
+  .drop {
+    margin-top: 8px; padding: 16px; border-radius: 12px; border: 1.5px dashed #c2c8bc; background: #fff;
+    cursor: pointer; color: var(--ink); opacity: 0.9; font-size: 0.88rem; text-align: center;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--line);
+    border-radius: 999px; padding: 4px 10px; font-size: 0.78rem;
+  }
+  .chip span.x { cursor: pointer; opacity: 0.5; font-weight: 700; }
+  .actions { display: flex; align-items: center; gap: 14px; margin-top: 20px; }
+  button.primary {
+    background: var(--ink); color: #fff; border: none; border-radius: 12px; padding: 12px 22px;
+    font-size: 0.92rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  }
+  button.primary:disabled { opacity: 0.7; cursor: default; }
+  button.link { background: transparent; border: none; color: var(--ink); opacity: 0.55; font-size: 0.85rem; cursor: pointer; }
+  .msg { margin-top: 16px; padding: 11px 14px; border-radius: 10px; background: #fff; border-left: 4px solid var(--teal); font-size: 0.86rem; }
+  .out { margin-top: 24px; }
+  .out-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  button.copy {
+    background: var(--lime); color: var(--ink); border: none; border-radius: 9px; padding: 7px 14px;
+    font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  }
+  button.copy.done { background: var(--teal); }
+  pre {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+    font-size: 0.82rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; color: var(--ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0;
+  }
+  .hint { font-size: 0.8rem; opacity: 0.6; margin-top: 10px; }
+  .spin { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div class="logo">✈️</div>
+      <div>
+        <h1>Conversor de fichas</h1>
+        <p class="sub">Del lío al texto ordenado, listo para importar</p>
+      </div>
+    </div>
+    <div class="rule"></div>
+
+    <label class="field" for="email">Mail del operador o tus notas</label>
+    <textarea id="email" placeholder="Pegá acá el mail desordenado, o escribí los datos sueltos de la cotización que estás armando..."></textarea>
+
+    <div style="margin-top:18px;">
+      <label class="field">Imágenes o PDF del vuelo / hotel (opcional)</label>
+      <div class="drop" id="drop">📎 Arrastrá o tocá para subir capturas de vuelos, hoteles, etc.</div>
+      <input id="fileInput" type="file" multiple accept="image/*,application/pdf" style="display:none" />
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="go">✈️ Armar ficha</button>
+      <button class="link" id="reset" style="display:none">Limpiar</button>
+    </div>
+
+    <div id="error" class="msg" style="display:none"></div>
+
+    <div class="out" id="outBox" style="display:none">
+      <div class="out-head">
+        <label class="field">Ficha lista para pegar</label>
+        <button class="copy" id="copy">Copiar</button>
+      </div>
+      <pre id="out"></pre>
+      <p class="hint">Copiala y pegala en "Importar con IA" de la página. Revisá y ajustá antes de guardar.</p>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let files = [];
+
+  function readAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(",")[1]);
+      r.onerror = () => reject(new Error("No se pudo leer " + file.name));
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function addFiles(list) {
+    for (const f of Array.from(list)) {
+      try {
+        const base64 = await readAsBase64(f);
+        files.push({ name: f.name, base64, mediaType: f.type, kind: f.type === "application/pdf" ? "pdf" : "image" });
+      } catch (e) { showError(e.message); }
+    }
+    renderChips();
+  }
+
+  function renderChips() {
+    const c = $("chips");
+    c.innerHTML = "";
+    files.forEach((f, i) => {
+      const span = document.createElement("span");
+      span.className = "chip";
+      const name = f.name.length > 24 ? f.name.slice(0, 22) + "…" : f.name;
+      span.innerHTML = "📄 " + name + ' <span class="x">✕</span>';
+      span.querySelector(".x").onclick = () => { files.splice(i, 1); renderChips(); };
+      c.appendChild(span);
+    });
+  }
+
+  function showError(t) { const e = $("error"); e.textContent = t; e.style.display = "block"; }
+  function clearError() { $("error").style.display = "none"; }
+
+  $("drop").onclick = () => $("fileInput").click();
+  $("fileInput").onchange = (e) => addFiles(e.target.files);
+  $("drop").ondragover = (e) => e.preventDefault();
+  $("drop").ondrop = (e) => { e.preventDefault(); addFiles(e.dataTransfer.files); };
+
+  $("reset").onclick = () => {
+    $("email").value = ""; files = []; renderChips();
+    $("outBox").style.display = "none"; clearError(); $("reset").style.display = "none";
+  };
+
+  $("copy").onclick = () => {
+    const ta = document.createElement("textarea");
+    ta.value = $("out").textContent;
+    document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); document.body.removeChild(ta);
+    const b = $("copy"); b.textContent = "Copiado"; b.classList.add("done");
+    setTimeout(() => { b.textContent = "Copiar"; b.classList.remove("done"); }, 1800);
+  };
+
+  $("go").onclick = async () => {
+    const emailText = $("email").value;
+    if (!emailText.trim() && files.length === 0) {
+      showError("Pegá el mail o subí una imagen/PDF para empezar.");
+      return;
+    }
+    clearError();
+    const btn = $("go");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin">⏳</span> Armando ficha…';
+    $("outBox").style.display = "none";
+
+    try {
+      const resp = await fetch("/api/convertir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailText, files }),
+      });
+      const data = await resp.json();
+      if (data.error) {
+        showError(data.error);
+      } else {
+        $("out").textContent = data.text;
+        $("outBox").style.display = "block";
+        $("reset").style.display = "inline";
+      }
+    } catch (e) {
+      showError("Falló la conexión. Revisá tu internet y volvé a intentar.");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "✈️ Armar ficha";
+    }
+  };
+</script>
+</body>
+</html>
